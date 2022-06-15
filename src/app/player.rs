@@ -1,9 +1,16 @@
 extern crate piston;
-use piston::UpdateArgs;
-use super::utils::{clamp, min, to_radians, Direction};
+extern crate graphics;
+extern crate opengl_graphics;
 
-const PLAYER_ACCELERATION: f64 = 0.1; // 0.5 pixels down per second
-const ROTATION_OFFSET: f64 = 25.0;
+use piston::{UpdateArgs};
+use graphics::{Context, Image};
+use graphics::math::{multiply, rotate_radians, translate, scale};
+use opengl_graphics::{GlGraphics, Texture};
+use super::utils::{clamp, min, to_radians, Direction};
+use super::{SHOW_HITBOXES, BLUE};
+
+const PLAYER_ACCELERATION: f64 = 0.5; // 0.5 pixels down per second
+const ROTATION_OFFSET: f64 = 5.0;
 
 pub struct Player {
     x: f64,
@@ -60,7 +67,7 @@ impl Player {
 
     #[inline(always)]
     pub fn get_angle_degrees(&self) -> f64 {
-        clamp(self.velocity[1], -10.0, 5.0) * self.get_rotation_offset()
+        clamp(self.velocity[1], -10.0, 10.0) * self.get_rotation_offset()
     }
 
     #[inline(always)]
@@ -99,5 +106,58 @@ impl Player {
     #[inline(always)]
     pub fn get_direction(&self) -> Direction {
         self.direction
+    }
+
+    #[inline(always)]
+    pub fn render(&self, c: Context, gl: &mut GlGraphics, height: u32, player_image: &mut Image, player_texture: &Texture) {
+        let scale_x = if self.get_direction() == Direction::Right {
+            1.0
+        } else {
+            -1.0
+        };
+
+        use graphics::*;
+        let player_pos = [self.get_x(), (height / 2) as f64];
+
+        // Rotate the player around it's center uising the multiply and rotate_radians functions.
+        let player_pos_transform = multiply(
+            translate(player_pos),
+            multiply(
+                rotate_radians(self.get_angle()),
+                scale(scale_x, 1.0),
+            ),
+        );
+
+        // Get the player transform.
+        let player_transform = multiply(
+            c.transform,
+            player_pos_transform,
+        );
+
+        // Move the player by the player X
+        player_image.draw(
+            player_texture,
+            &DrawState::default(),
+            player_transform,
+            gl
+        );
+
+        // Draw the player's hitbox.
+        if SHOW_HITBOXES {
+            let hitbox_transform = multiply(
+                player_transform,
+                multiply(
+                    rotate_radians(-self.get_angle()),
+                    translate([self.width / 2.0, self.height / 2.0]),
+                ),
+            );
+            let border = graphics::Rectangle::new_border(BLUE, 1.0);
+            border.draw(
+                [0.0, 0.0, 0.5, 0.5],
+                &c.draw_state,
+                hitbox_transform,
+                gl
+            );
+        }
     }
 }

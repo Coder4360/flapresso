@@ -51,3 +51,14 @@ impl Clone for Direction {
 }
 
 impl Copy for Direction {}
+
+pub fn left_justify_str(string: String, width: usize) -> String {
+    if string.len() >= width {
+        string
+    } else {
+        let mut result = String::with_capacity(width);
+        result.push_str(&" ".repeat(width - string.len()));
+        result.push_str(&string);
+        result
+    }
+}
